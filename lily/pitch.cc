@@ -19,6 +19,7 @@
 
 #include "pitch.hh"
 
+#include "format_utils.hh"
 #include "lily-imports.hh"
 #include "scale.hh"
 #include "string-convert.hh"
@@ -237,9 +238,12 @@ Pitch::mark_smob () const
 int
 Pitch::print_smob (SCM port, scm_print_state *) const
 {
-  scm_puts ("#<Pitch ", port);
-  scm_display (to_scm (to_string ()), port);
-  scm_puts (" >", port);
+  extra_utils::string_writer w;
+  w << "#<Pitch ";
+  w << to_string ();
+  w << "(" << octave_ << "," << notename_ << "," << alteration_ << ")";
+  w << ">";
+  scm_display (to_scm (w.str ()), port);
   return 1;
 }
 

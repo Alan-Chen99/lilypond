@@ -93,7 +93,7 @@
 
 class Listener : public Simple_smob<Listener>
 {
-private:
+public:
   SCM callback_;
   SCM target_;
 

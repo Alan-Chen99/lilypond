@@ -16,7 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with LilyPond.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include <iostream>
 #include "rhythmic-music-iterator.hh"
 
 #include "context.hh"
@@ -26,6 +26,7 @@
 #include "international.hh"
 #include "music.hh"
 #include "warn.hh"
+#include "format_utils.hh"
 
 Rhythmic_music_iterator::Rhythmic_music_iterator ()
 {
@@ -47,6 +48,41 @@ Rhythmic_music_iterator::process (Moment m)
 
       Context *c = get_context ();
       Stream_event *ev = get_music ()->to_event ();
+
+      // extra_utils::println (__PRETTY_FUNCTION__);
+      // auto _raii = extra_utils::with_indent ();
+      // extra_utils::println (get_property (ev, "pitch"));
+
+      auto tonic = unsmob<Pitch> (get_property (get_context (), "tonic"));
+
+      if (tonic)
+        {
+          auto tp = tonic->tone_pitch ();
+          auto target_shift = (-tp) % 6;
+          if (target_shift > 3)
+            target_shift -= 6;
+
+          auto diff = pitch_interval (*tonic, Pitch ());
+          auto offset = (diff.tone_pitch () - target_shift) / 6;
+          diff = pitch_interval (
+            Pitch (static_cast<int> (offset.trunc_int ()), 0), diff);
+
+          assert (diff.tone_pitch () == target_shift);
+
+          ev->make_transposable ();
+          // extra_utils::println ("transposing by", target_shift);
+          ev->transpose (diff);
+        }
+
+      // extra_utils::println (get_context ());
+      // extra_utils::println (get_context ()->properties_as_alist ());
+
+      // extra_utils::println (get_context ()->get_parent ());
+      // extra_utils::println (
+      //   get_context ()->get_parent ()->properties_as_alist ());
+
+      // extra_utils::println ();
+
       SCM arts = get_property (ev, "articulations");
 
       if (scm_is_pair (arts))

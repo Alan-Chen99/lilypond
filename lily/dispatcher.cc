@@ -22,6 +22,7 @@
 #include "international.hh"
 #include "warn.hh"
 #include "lily-imports.hh"
+#include "format_utils.hh"
 
 #if defined(__MINGW32__)
 #include <malloc.h>
@@ -82,6 +83,11 @@ Event dispatching:
 void
 Dispatcher::dispatch (SCM sev)
 {
+  // extra_utils::println (__PRETTY_FUNCTION__);
+  // auto _raii = extra_utils::with_indent ();
+  // extra_utils::println (extra_utils::type_name (*this));
+  // extra_utils::println (sev);
+
   Stream_event *ev = unsmob<Stream_event> (sev);
   SCM class_list = get_property (ev, "class");
   if (!scm_is_pair (class_list))
@@ -155,6 +161,21 @@ Dispatcher::dispatch (SCM sev)
           last_priority = lists[0].prio;
 
           SCM l = scm_cdar (lists[0].list);
+
+          // extra_utils::println ("Dispatcher::dispatch / call");
+          // auto _raii = extra_utils::with_indent ();
+          // if (auto l_ = unsmob<Listener> (l))
+          //   {
+          //     extra_utils::println (l_->callback_);
+
+          //     if (auto x = unsmob<Dispatcher> (l_->target_))
+          //       extra_utils::println (extra_utils::type_name (*x));
+          //     else
+          //       extra_utils::println (l_->target_);
+
+          //     extra_utils::println ();
+          //   }
+
           ly_call (l, ev->self_scm ());
         }
       // go to the next listener; bubble-sort the class list.

@@ -85,3 +85,4 @@ semantic.cache
 /build/
 input/regression/**/*.pdf
 Documentation/snippets/**/*.pdf
+compile_commands.json

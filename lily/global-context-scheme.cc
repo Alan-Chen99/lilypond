@@ -125,7 +125,7 @@ final state.
   if (auto *g = unsmob<Global_context> (glob))
     {
       ly_make_global_translator (glob);
-      message (_ ("Interpreting music..."));
+      message (_ ("Interpreting music...\n"));
       if (!g->iterate (music, false))
         {
           music->warning (_ ("skipping zero-duration score"));
