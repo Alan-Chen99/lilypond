@@ -488,6 +488,9 @@ is a number in the range 0 to@tie{}6 and @var{alter} a fraction,
 denoting alteration.  For alterations, use symbols, e.g.,
 @code{keyAlterations = #`((6 . ,FLAT))}.")
 
+     (keyAlterations__hide ,list? "...")
+     (lastKeyAlterations__hide ,list? "...")
+     (__transpose ,ly:pitch? "...")
 
      (lyricMelismaAlignment ,number? "Alignment to use for a melisma syllable.")
      (lyricRepeatCountFormatter ,procedure? "A procedure taking as

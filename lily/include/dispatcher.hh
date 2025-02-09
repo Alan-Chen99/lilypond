@@ -45,8 +45,10 @@ private:
   int priority_count_;
   void internal_add_listener (SCM callback, SCM event_class, int priority);
 
+  Context *event_source_of;
+
 public:
-  Dispatcher ();
+  Dispatcher (Context *);
   void broadcast (Stream_event *ev);
   bool is_listened_class (SCM);
   SCM listened_types ();

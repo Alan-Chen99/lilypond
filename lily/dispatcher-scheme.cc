@@ -24,7 +24,7 @@ LY_DEFINE (ly_make_dispatcher, "ly:make-dispatcher", 0, 0, 0, (),
 Return a newly created dispatcher.
            )")
 {
-  return (new Dispatcher ())->unprotect ();
+  return (new Dispatcher (nullptr))->unprotect ();
 }
 
 LY_DEFINE (ly_connect_dispatchers, "ly:connect-dispatchers", 2, 0, 0,

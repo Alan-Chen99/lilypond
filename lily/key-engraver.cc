@@ -26,8 +26,13 @@
 #include "protected-scm.hh"
 #include "staff-symbol-referencer.hh"
 #include "stream-event.hh"
+#include "format_utils.hh"
 
 #include "translator.icc"
+
+constexpr auto &keyAlterations_key = "keyAlterations__hide";
+constexpr auto &lastKeyAlterations_key = "lastKeyAlterations__hide";
+constexpr auto &tonic_key = "tonic";
 
 class Key_engraver final : public Engraver
 {
@@ -64,6 +69,8 @@ Key_engraver::Key_engraver (Context *c)
 void
 Key_engraver::create_key (bool is_default)
 {
+  // extra_utils::println (__PRETTY_FUNCTION__);
+  // auto _raii = extra_utils::with_indent ();
   if (!item_)
     {
       item_ = make_item ("KeySignature",
@@ -76,8 +83,9 @@ Key_engraver::create_key (bool is_default)
       set_property (item_, "c0-position",
                     get_property (this, "middleCClefPosition"));
 
-      SCM last = get_property (this, "lastKeyAlterations");
-      SCM key = get_property (this, "keyAlterations");
+      SCM last = get_property (this, lastKeyAlterations_key);
+      SCM key = get_property (this, keyAlterations_key);
+      // extra_utils::println ("reading keyAlterations_key:", key);
 
       if ((from_scm<bool> (get_property (this, "printKeyCancellation"))
            || scm_is_null (key))
@@ -110,7 +118,9 @@ Key_engraver::create_key (bool is_default)
             }
         }
 
-      set_property (item_, "alteration-alist", scm_reverse (key));
+      auto alt_alist = scm_reverse (key);
+      // extra_utils::println ("setting alteration-alist:", item_, alt_alist);
+      set_property (item_, "alteration-alist", alt_alist);
     }
 
   if (!is_default)
@@ -124,6 +134,12 @@ Key_engraver::create_key (bool is_default)
 void
 Key_engraver::listen_key_change (Stream_event *ev)
 {
+  extra_utils::println (__PRETTY_FUNCTION__);
+  auto _raii = extra_utils::with_indent ();
+
+  ev = unsmob<Stream_event> (get_property (ev, "__before_transpose"));
+  assert (ev);
+
   /* do this only once, just to be on the safe side.  */
   if (assign_event_once (key_event_, ev))
     read_event (key_event_);
@@ -146,8 +162,8 @@ Key_engraver::process_music ()
     create_key (true);
 
   if (key_event_
-      || !scm_is_eq (get_property (this, "lastKeyAlterations"),
-                     get_property (this, "keyAlterations")))
+      || !scm_is_eq (get_property (this, lastKeyAlterations_key),
+                     get_property (this, keyAlterations_key)))
     create_key (false);
 }
 
@@ -155,8 +171,8 @@ void
 Key_engraver::stop_translation_timestep ()
 {
   item_ = nullptr;
-  set_property (context (), "lastKeyAlterations",
-                get_property (this, "keyAlterations"));
+  set_property (context (), lastKeyAlterations_key,
+                get_property (this, keyAlterations_key));
   cancellation_ = nullptr;
   key_event_ = nullptr;
 }
@@ -197,15 +213,42 @@ Key_engraver::read_event (Stream_event const *r)
         r->warning (_ ("Incomplete keyAlterationOrder for key signature"));
     }
 
-  set_property (context (), "keyAlterations", scm_reverse_x (accs, SCM_EOL));
-  set_property (context (), "tonic", get_property (r, "tonic"));
+  auto keyalt = scm_reverse_x (accs, SCM_EOL);
+
+  auto tonic_scm = get_property (r, "tonic");
+  set_property (context (), keyAlterations_key, keyalt);
+  set_property (context (), tonic_key, tonic_scm);
+
+  extra_utils::println ("setting keyAlterations:", keyalt);
+  extra_utils::println ("tonic:", tonic_scm);
+
+  auto tonic = unsmob<Pitch> (tonic_scm);
+  if (tonic)
+    {
+      auto tp = tonic->tone_pitch ();
+      auto target_shift = (-tp) % 6;
+      if (target_shift > 3)
+        target_shift -= 6;
+
+      auto diff = pitch_interval (*tonic, Pitch ());
+      auto offset = (diff.tone_pitch () - target_shift) / 6;
+      diff = pitch_interval (Pitch (static_cast<int> (offset.trunc_int ()), 0),
+                             diff);
+
+      assert (diff.tone_pitch () == target_shift);
+
+      extra_utils::println ("transposing by", target_shift);
+      set_property (context (), "__transpose", diff.smobbed_copy ());
+    }
 }
 
 void
 Key_engraver::initialize ()
 {
-  set_property (context (), "keyAlterations", SCM_EOL);
-  set_property (context (), "lastKeyAlterations", SCM_EOL);
+  set_property (context (), keyAlterations_key, SCM_EOL);
+  set_property (context (), lastKeyAlterations_key, SCM_EOL);
+  // set_property (context (), "keyAlterations", SCM_EOL);
+  // set_property (context (), "lastKeyAlterations", SCM_EOL);
 
   Pitch p;
   set_property (context (), "tonic", p.smobbed_copy ());
@@ -239,7 +282,9 @@ forbidBreak
 forceBreak
 keyAlterationOrder
 keyAlterations
+keyAlterations__hide
 lastKeyAlterations
+lastKeyAlterations__hide
 printKeyCancellation
 middleCClefPosition
                 )",
@@ -247,6 +292,8 @@ middleCClefPosition
                 /* write */
                 R"(
 keyAlterations
+keyAlterations__hide
 lastKeyAlterations
+lastKeyAlterations__hide
 tonic
                 )");

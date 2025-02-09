@@ -34,6 +34,7 @@
 #include "grob-info.hh"
 #include "lily-proto.hh"
 #include "smobs.hh"
+#include "utils.hh"
 
 #include <type_traits>
 #include <utility>
@@ -60,11 +61,19 @@ class Callback_wrapper : public Simple_smob<Callback_wrapper<Result, Args...>>
   // Writing force_scm_t<Args>... here would interfere with class template
   // argument deduction; however, all arguments must be SCM for the
   // initialization of trampoline_ to compile; therefore, we have lost nothing.
-  Callback_wrapper (Result (*trampoline) (Args...))
-    : trampoline_ (trampoline)
+public:
+  std::string name_;
+  Callback_wrapper (Result (*trampoline) (Args...), std::string name)
+    : trampoline_ (trampoline),
+      name_ (name)
   {
   } // Private constructor, use only in get_callback_wrapper_smob
 public:
+  int print_smob (SCM port, scm_print_state *) const
+  {
+    scm_puts (name_.c_str (), port);
+    return 1;
+  }
   // The unsigned {} cast works around a false conversion warning from g++ 9.3.0
   // on x86_64.
   LY_DECLARE_STATIC_SMOB_PROC (call, unsigned {sizeof...(Args)}, 0, 0)
@@ -96,7 +105,8 @@ get_callback_wrapper_smob ()
   // argument deduction during construction of temporaries, as required for
   // Callback_wrapper (trampoline).smobbed_copy ()
   static SCM res = [] {
-    Callback_wrapper wrapper (trampoline);
+    Callback_wrapper wrapper (trampoline,
+                              extra_utils::type_name<trampoline> ());
     return scm_permanent_object (wrapper.smobbed_copy ());
   }();
   return res;

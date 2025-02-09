@@ -22,6 +22,7 @@
 #include "international.hh"
 #include "warn.hh"
 #include "lily-imports.hh"
+#include "format_utils.hh"
 
 #if defined(__MINGW32__)
 #include <malloc.h>
@@ -38,7 +39,7 @@ Dispatcher::~Dispatcher ()
 {
 }
 
-Dispatcher::Dispatcher ()
+Dispatcher::Dispatcher (Context *event_source_of_)
 {
   listeners_ = SCM_EOL;
   dispatchers_ = SCM_EOL;
@@ -46,6 +47,7 @@ Dispatcher::Dispatcher ()
   smobify_self ();
   listeners_ = scm_c_make_hash_table (17);
   priority_count_ = 0;
+  event_source_of = event_source_of_;
 }
 
 SCM
@@ -82,6 +84,11 @@ Event dispatching:
 void
 Dispatcher::dispatch (SCM sev)
 {
+  // extra_utils::println (__PRETTY_FUNCTION__);
+  // auto _raii = extra_utils::with_indent ();
+  // extra_utils::println (extra_utils::type_name (*this));
+  // extra_utils::println (sev);
+
   Stream_event *ev = unsmob<Stream_event> (sev);
   SCM class_list = get_property (ev, "class");
   if (!scm_is_pair (class_list))
@@ -155,6 +162,21 @@ Dispatcher::dispatch (SCM sev)
           last_priority = lists[0].prio;
 
           SCM l = scm_cdar (lists[0].list);
+
+          // extra_utils::println ("Dispatcher::dispatch / call");
+          // auto _raii = extra_utils::with_indent ();
+          // if (auto l_ = unsmob<Listener> (l))
+          //   {
+          //     extra_utils::println (l_->callback_);
+
+          //     if (auto x = unsmob<Dispatcher> (l_->target_))
+          //       extra_utils::println (extra_utils::type_name (*x));
+          //     else
+          //       extra_utils::println (l_->target_);
+
+          //     extra_utils::println ();
+          //   }
+
           ly_call (l, ev->self_scm ());
         }
       // go to the next listener; bubble-sort the class list.
@@ -198,7 +220,30 @@ Dispatcher::listened_types ()
 void
 Dispatcher::broadcast (Stream_event *ev)
 {
+  // extra_utils::println (__PRETTY_FUNCTION__);
+  // auto _raii = extra_utils::with_indent ();
+  // extra_utils::println (event_source_of);
+  // extra_utils::println (ev);
+
+  assert (event_source_of);
+
+  auto transpose
+    = unsmob<Pitch> (get_property (event_source_of, "__transpose"));
+  // extra_utils::println ("__transpose=", transpose);
+
+  auto before_transpose = ev->clone ()->self_scm ();
+  set_property (ev, "__before_transpose", before_transpose);
+
+  if (transpose)
+    {
+      ev->make_transposable ();
+      ev->transpose (*transpose);
+    }
+
   dispatch (ev->self_scm ());
+
+  // extra_utils::println ();
+  // extra_utils::println ();
 }
 
 // add_listener will always assign a new priority for each call

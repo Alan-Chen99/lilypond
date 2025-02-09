@@ -99,9 +99,9 @@ Context::Context (Context_def *cdef, SCM ops)
   smobify_self ();
 
   properties_scm_ = Scheme_hash_table::make_smob ();
-  event_source_ = new Dispatcher ();
+  event_source_ = new Dispatcher (this);
   event_source_->unprotect ();
-  events_below_ = new Dispatcher ();
+  events_below_ = new Dispatcher (nullptr);
   events_below_->unprotect ();
 
   definition_ = cdef->self_scm ();
